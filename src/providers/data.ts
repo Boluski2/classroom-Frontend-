@@ -1,58 +1,56 @@
+import { BACKEND_BASE_URL } from "@/constants";
+import { ListResponse } from "@/types";
+import { createDataProvider, CreateDataProviderOptions, } from "@refinedev/rest";
+
+// Define the options for the data provider, including custom logic for handling API responses
+const options: CreateDataProviderOptions = {
+  // Add any custom options here
+   getList: {
+    // The endpoint can be a string or a function that returns a string based on the resource
+        getEndpoint: ({resource}) => resource,
+
+        buildQueryParams: async ({ pagination, filters, resource }) => {
+
+          const page = pagination?.currentPage ?? 1;
+          const pageSize = pagination?.pageSize ?? 10;
+
+          const params: Record<string, string | number> = { page, limit:pageSize }
 
 
-import { get } from "http";
-import { Subject } from "../types";
-import { DataProvider, GetListParams, GetListResponse, BaseRecord } from "@refinedev/core";
+          filters?.forEach((filter) => {
+            const field = 'field' in filter ? filter.field : ' ';
+
+            const value = String(filter.value)
+
+            if ( resource === 'subjects') {
+              if (field === 'department') params.department = value;
+              if (field === 'name' || field === 'code' ) params.search = value;
+            }
+          })
+
+          return params;
+
+        },
 
 
 
-// Mock subject data for three university courses
-const mockSubjects: Subject[] = [
-  {
-    id: 1,
-    name: "Introduction to Computer Science",
-    code: "CS101",
-    department: "Computer Science",
-    description: "A comprehensive introduction to computer science fundamentals, covering algorithms, data structures, and programming paradigms. Students will learn problem-solving techniques and computational thinking.",
-    createdAt: "2024-01-15T10:00:00Z",
-  },
-  {
-    id: 2,
-    name: "Calculus II",
-    code: "MATH201",
-    department: "Mathematics",
-    description: "Advanced calculus course focusing on integration techniques, differential equations, and infinite series. This course builds on calculus fundamentals and prepares students for advanced mathematics and physics.",
-    createdAt: "2024-01-15T10:00:00Z",
-  },
-  {
-    id: 3,
-    name: "Principles of Biology",
-    code: "BIO150",
-    department: "Biology",
-    description: "An introductory biology course exploring the structure and function of living organisms, cellular biology, genetics, and evolution. Students engage with both theoretical concepts and hands-on laboratory experiments.",
-    createdAt: "2024-01-15T10:00:00Z",
-  },
-];
+// The mapResponse function allows you to transform the API response before it is used by the application
+        mapResponse: async (response) => {
+        const payload: ListResponse = await response.json();
 
-export const dataProvider: DataProvider = {
-  getList: async <TData extends BaseRecord  = BaseRecord>( {resource} :
-   GetListParams): Promise<GetListResponse<TData>> => {
-    // Implement your logic to fetch a list of resources
-    if ( resource !== "subjects" ) return {
-      data: [] as TData[],
-      total: 0,
-    }
-    return {
-      data: mockSubjects as unknown as TData[],
-      total: mockSubjects.length,
-    }
-  },
+          return payload.data ?? [];
+        },
 
-  getOne: async () =>{ throw new Error ("Method not implemented.") },
-  create : async () =>{ throw new Error ("Method not implemented.") },
-  update : async () =>{ throw new Error ("Method not implemented.") },
-  deleteOne : async () =>{ throw new Error ("Method not implemented.") },
-  
-  getApiUrl : () => { throw new Error ("Method not implemented.") },
-  custom : async () =>{ throw new Error ("Method not implemented.") },
-}
+        // The getTotalCount function is used to extract the total count of items from the API response, which is useful for pagination
+        getTotalCount: async (response) => {
+          const payload: ListResponse = await response.json();
+          return payload.pagination?.total ?? payload.data?.length ??  0;
+        },
+      },
+
+};
+
+// Create the data provider using the base URL and options
+const {dataProvider} = createDataProvider(BACKEND_BASE_URL, options);
+
+export { dataProvider };
