@@ -2,6 +2,10 @@ import { BACKEND_BASE_URL } from "@/constants";
 import { ListResponse } from "@/types";
 import { createDataProvider, CreateDataProviderOptions, } from "@refinedev/rest";
 
+if (!BACKEND_BASE_URL) {
+  throw new Error("BACKEND_BASE_URL is not defined in environment variables");
+}
+
 // Define the options for the data provider, including custom logic for handling API responses
 const options: CreateDataProviderOptions = {
   // Add any custom options here
@@ -36,14 +40,14 @@ const options: CreateDataProviderOptions = {
 
 // The mapResponse function allows you to transform the API response before it is used by the application
         mapResponse: async (response) => {
-        const payload: ListResponse = await response.json();
+        const payload: ListResponse = await response.clone().json();
 
           return payload.data ?? [];
         },
 
         // The getTotalCount function is used to extract the total count of items from the API response, which is useful for pagination
         getTotalCount: async (response) => {
-          const payload: ListResponse = await response.json();
+          const payload: ListResponse = await response.clone().json();
           return payload.pagination?.total ?? payload.data?.length ??  0;
         },
       },
