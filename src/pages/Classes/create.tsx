@@ -24,7 +24,7 @@ import { CreateView } from "@/components/refine-ui/views/create-view";
 import { Breadcrumb } from "@/components/refine-ui/layout/breadcrumb";
 
 import { Textarea } from "@/components/ui/textarea";
-import { useBack, useList } from "@refinedev/core";
+import { useBack, useList, useNotification } from "@refinedev/core";
 import { Loader2 } from "lucide-react";
 import { classSchema } from "@/lib/schema";
 import UploadWidget from "@/components/upload-widget";
@@ -33,6 +33,7 @@ import z from "zod";
 
 const ClassesCreate = () => {
   const back = useBack();
+  const { open: notify } = useNotification();
 
   const form = useForm({
     resolver: zodResolver(classSchema),
@@ -58,7 +59,13 @@ const ClassesCreate = () => {
     try {
       await onFinish(values);
     } catch (error) {
-      console.error("Error creating class:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      notify?.({
+        type: "error",
+        message: "Failed to create class",
+        description: errorMessage,
+      });
+      throw error;
     }
   };
 
@@ -328,7 +335,12 @@ const ClassesCreate = () => {
 
                 <Separator />
 
-                <Button type="submit" size="lg" className="w-full">
+                  <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full"
+                  disabled={isSubmitting}
+                >
                   {isSubmitting ? (
                     <div className="flex gap-1">
                       <span>Creating Class...</span>

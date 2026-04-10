@@ -15,6 +15,8 @@ function UploadWidget({
   const [preview, setPreview] = useState<UploadWidgetValue | null>(value);
   const [deleteToken, setDeleteToken] = useState<string | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [widgetReady, setWidgetReady] = useState(false);
+  const [widgetError, setWidgetError] = useState<string | null>(null);
 
   // Always keep latest onChange
   useEffect(() => {
@@ -32,6 +34,9 @@ function UploadWidget({
   // Initialize Cloudinary widget (client-side only)
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    const MAX_RETRIES = 20; // 20 retries × 500ms = 10 seconds max
+    let retryCount = 0;
 
     const initializeWidget = () => {
       if (!window.cloudinary || widgetRef.current) return false;
@@ -62,10 +67,21 @@ function UploadWidget({
       return true;
     };
 
-    if (initializeWidget()) return;
+    if (initializeWidget()) {
+      setWidgetReady(true);
+      setWidgetError(null);
+      return;
+    }
 
     const intervalId = window.setInterval(() => {
+      retryCount++;
+
       if (initializeWidget()) {
+        setWidgetReady(true);
+        setWidgetError(null);
+        window.clearInterval(intervalId);
+      } else if (retryCount >= MAX_RETRIES) {
+        setWidgetError("Failed to load upload widget. Please refresh the page.");
         window.clearInterval(intervalId);
       }
     }, 500);
@@ -74,7 +90,7 @@ function UploadWidget({
   }, []);
 
   const openWidget = () => {
-    if (!disabled) {
+    if (!disabled && widgetReady) {
       widgetRef.current?.open();
     }
   };
@@ -83,32 +99,45 @@ function UploadWidget({
     if (!preview) return;
 
     setIsRemoving(true);
+      let removed = !deleteToken;
 
     try {
       if (deleteToken) {
         const params = new URLSearchParams();
         params.append("token", deleteToken);
 
-        await fetch(
+       
+          const response = await fetch(
           `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/delete_by_token`,
           {
             method: "POST",
             body: params,
           }
         );
-      }
+               if (!response.ok) {
+          throw new Error("Cloudinary delete failed");
+        }
+        removed = true;
+       }
     } catch (error) {
       console.error("Failed to remove image from Cloudinary", error);
     } finally {
-      setPreview(null);
-      setDeleteToken(null);
-      onChangeRef.current?.(null);
+      if (removed) {
+       setPreview(null);
+        setDeleteToken(null);
+       onChangeRef.current?.(null);
+      }
       setIsRemoving(false);
     }
   };
 
   return (
     <div className="space-y-2">
+      {widgetError && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-800">
+          {widgetError}
+        </div>
+      )}
       {preview ? (
         <div className="upload-preview">
           <img src={preview.url} alt="Uploaded file" />
@@ -118,7 +147,7 @@ function UploadWidget({
             size="icon"
             variant="destructive"
             onClick={removeFromCloudinary}
-            disabled={isRemoving || disabled}
+            disabled={isRemoving || disabled || !widgetReady}
           >
             <Trash className="size-4" />
           </Button>
