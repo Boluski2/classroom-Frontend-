@@ -13,6 +13,9 @@ const options: CreateDataProviderOptions = {
     // The endpoint can be a string or a function that returns a string based on the resource
         getEndpoint: ({resource}) => resource,
 
+
+
+        // The buildQueryParams function allows you to construct the query parameters for the API request based on the pagination and filters provided by the application
         buildQueryParams: async ({ pagination, filters, resource }) => {
 
           const page = pagination?.currentPage ?? 1;
