@@ -53,6 +53,35 @@ const ClassesCreate = () => {
     control,
   } = form;
 
+ // Fetch subjects list
+  const { query: subjectsQuery } = useList<Subject>({
+    resource: "subjects",
+    pagination: {
+      pageSize: 100,
+    },
+  })
+
+  // Fetch teachers list
+    const { query: teachersQuery } = useList<User>({
+    resource: "users",
+    filters: [
+      {
+        field: "role",
+        operator: "eq",
+        value: "teacher",
+      }
+    ],
+    pagination: {
+      pageSize: 100,
+    },
+  })
+
+  const subject = subjectsQuery.data?.data || [];
+  const subjectsLoading = subjectsQuery.isLoading;
+
+  const teachers = teachersQuery.data?.data || [];
+  const teachersLoading = teachersQuery.isLoading;
+
   const bannerPublicId = form.watch("bannerCldPubId");
 
   const onSubmit = async (values: z.infer<typeof classSchema>) => {
@@ -69,34 +98,6 @@ const ClassesCreate = () => {
     }
   };
 
-  // Fetch subjects list
-  const { query: subjectsQuery } = useList<Subject>({
-    resource: "subjects",
-    pagination: {
-      pageSize: 100,
-    },
-  });
-
-  // Fetch teachers list
-  const { query: teachersQuery } = useList<User>({
-    resource: "users",
-    filters: [
-      {
-        field: "role",
-        operator: "eq",
-        value: "teacher",
-      },
-    ],
-    pagination: {
-      pageSize: 100,
-    },
-  });
-
-  const teachers = teachersQuery.data?.data || [];
-  const teachersLoading = teachersQuery.isLoading;
-
-  const subjects = subjectsQuery.data?.data || [];
-  const subjectsLoading = subjectsQuery.isLoading;
 
 
   return (
@@ -210,7 +211,7 @@ const ClassesCreate = () => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {subjects.map((subject) => (
+                            {subject.map((subject) => (
                               <SelectItem
                                 key={subject.id}
                                 value={subject.id.toString()}
@@ -361,4 +362,3 @@ const ClassesCreate = () => {
 
 export default ClassesCreate;
 
-// 4:34:56
