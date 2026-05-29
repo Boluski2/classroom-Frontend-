@@ -1,4 +1,5 @@
 import { CreateButton } from "@/components/refine-ui/buttons/create"
+import { ShowButton } from "@/components/refine-ui/buttons/show"
 import { DataTable } from "@/components/refine-ui/data-table/data-table"
 import { Breadcrumb } from "@/components/refine-ui/layout/breadcrumb"
 import { ListView } from "@/components/refine-ui/views/list-view"
@@ -147,9 +148,15 @@ const ClassesList = () => {
           header: () => <p className="column-title">Capacity</p>,
           cell: ({ getValue }) => <span>{getValue<number>()}</span>,
         },
-      ],
-      []
-    ),
+        {
+          id: "details",
+          size: 140,
+          header: () => <p className="column-title">Details</p>,
+          cell: ({ row }) => <ShowButton resource="classes" recordItemId={row.original.id}
+          variant="outline" size="sm">View</ShowButton>
+        },
+      ], []),
+    
     refineCoreProps: {
       resource: "classes",
       pagination: {
