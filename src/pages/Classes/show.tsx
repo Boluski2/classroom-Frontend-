@@ -1,4 +1,3 @@
-// import { AdvancedImage } from "@cloudinary/react";
 import { AdvancedImage } from "@cloudinary/react";
 import { useShow } from "@refinedev/core";
 import { useTable } from "@refinedev/react-table";
@@ -34,6 +33,7 @@ const ClassesShow = () => {
 
   const { query } = useShow<ClassDetails>({
     resource: "classes",
+    id: classId,
   });
 
   const classDetails = query.data?.data;
@@ -117,16 +117,13 @@ const ClassesShow = () => {
   }
 
   const teacherName = classDetails.teacher?.name ?? "Unknown";
-  const teacherInitials = teacherName
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
+  const teacherInitials = getInitials(classDetails.teacher?.name ?? "Unknown");
 
   const placeholderUrl = `https://placehold.co/600x400?text=${encodeURIComponent(
     teacherInitials || "NA"
   )}`;
+
+  const status = classDetails.status ?? "unknown";
 
   return (
     <ShowView className="class-view class-show space-y-6">
@@ -167,12 +164,10 @@ const ClassesShow = () => {
             <div>
               <Badge variant="outline">{classDetails.capacity} spots</Badge>
               <Badge
-                variant={
-                  classDetails.status === "active" ? "default" : "secondary"
-                }
-                data-status={classDetails.status}
+                variant={status === "active" ? "default" : "secondary"}
+                data-status={status}
               >
-                {classDetails.status.toUpperCase()}
+                {status.toUpperCase()}
               </Badge>
             </div>
           </div>
@@ -242,7 +237,7 @@ const ClassesShow = () => {
           <CardTitle>Enrolled Students</CardTitle>
         </CardHeader>
         <CardContent>
-          <DataTable table={studentsTable} paginationVariant="simple" />
+          <DataTable table={studentsTable} />
         </CardContent>
       </Card>
     </ShowView>
