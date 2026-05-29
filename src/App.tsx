@@ -19,6 +19,7 @@ import SubjectList from "./pages/subject/list";
 import SubjectCreate from "./pages/subject/create";
 import ClassesList from "./pages/Classes/list";
 import ClassesCreate from "./pages/Classes/create";
+import ClassesShow from "./pages/Classes/show";
 
 
 function App() {
@@ -51,6 +52,7 @@ function App() {
                   name: "classes",
                   list: "/classes",
                   create: "/classes/create",
+                  show: "/classes/show/:id",
                   meta : { label: "Classes", icon: <GraduationCap/> }
                 },
               ]}
@@ -69,6 +71,7 @@ function App() {
                 <Route path="classes">
                 <Route index element={<ClassesList />} />
                 <Route path="create" element={<ClassesCreate />} />
+                <Route path="show/:id" element={<ClassesShow />} />
                </Route>
               </Route>
               </Routes>
