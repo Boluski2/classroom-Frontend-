@@ -1,8 +1,8 @@
 import { AdvancedImage } from "@cloudinary/react";
-import { useShow } from "@refinedev/core";
+import { useCreate, useDelete, useList, useShow } from "@refinedev/core";
 import { useTable } from "@refinedev/react-table";
 import { ColumnDef } from "@tanstack/react-table";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router";
 
 import { DataTable } from "@/components/refine-ui/data-table/data-table";
@@ -16,8 +16,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { bannerPhoto } from "@/lib/cloudinary";
-import { ClassDetails } from "@/types";
+import { ClassDetails, User } from "@/types";
 
 type ClassUser = {
   id: string;
@@ -30,13 +37,30 @@ type ClassUser = {
 const ClassesShow = () => {
   const { id } = useParams();
   const classId = id ?? "";
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { query } = useShow<ClassDetails>({
     resource: "classes",
     id: classId,
   });
+  const { mutateAsync: createEnrollment } = useCreate();
+  const { mutateAsync: removeEnrollment } = useDelete();
+  const { query: studentsQuery } = useList<User>({
+    resource: "users",
+    filters: [{ field: "role", operator: "eq", value: "student" }],
+    pagination: { pageSize: 100 },
+  });
+  const { query: enrolledQuery } = useList<ClassUser>({
+    resource: `classes/${classId}/users`,
+    pagination: { pageSize: 100 },
+    filters: [{ field: "role", operator: "eq", value: "student" }],
+    queryOptions: { enabled: Boolean(classId) },
+  });
 
   const classDetails = query.data?.data;
+  const students = studentsQuery.data?.data ?? [];
+  const enrolledStudents = enrolledQuery.data?.data ?? [];
 
   const studentColumns = useMemo<ColumnDef<ClassUser>[]>(
     () => [
@@ -64,17 +88,27 @@ const ClassesShow = () => {
       },
       {
         id: "details",
-        size: 140,
-        header: () => <p className="column-title">Details</p>,
+        size: 180,
+        header: () => <p className="column-title">Actions</p>,
         cell: ({ row }) => (
-          <ShowButton
-            resource="users"
-            recordItemId={row.original.id}
-            variant="outline"
-            size="sm"
-          >
-            View
-          </ShowButton>
+          <div className="flex gap-2">
+            <ShowButton
+              resource="users"
+              recordItemId={row.original.id}
+              variant="outline"
+              size="sm"
+            >
+              View
+            </ShowButton>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => handleRemoveEnrollment(row.original.id)}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Removing..." : "Remove"}
+            </Button>
+          </div>
         ),
       },
     ],
@@ -86,7 +120,7 @@ const ClassesShow = () => {
     refineCoreProps: {
       resource: `classes/${classId}/users`,
       pagination: {
-        pageSize: 3,
+        pageSize: 10,
         mode: "server",
       },
       filters: {
@@ -100,6 +134,37 @@ const ClassesShow = () => {
       },
     },
   });
+
+  const handleEnrollStudent = async () => {
+    if (!classId || !selectedStudentId) return;
+
+    setIsSubmitting(true);
+    try {
+      await createEnrollment({
+        resource: `classes/${classId}/enroll`,
+        values: { studentId: selectedStudentId },
+      });
+      setSelectedStudentId("");
+      await enrolledQuery.refetch();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRemoveEnrollment = async (studentId: string) => {
+    if (!classId) return;
+
+    setIsSubmitting(true);
+    try {
+      await removeEnrollment({
+        resource: `classes/${classId}/enroll/${studentId}`,
+        id: studentId,
+      });
+      await enrolledQuery.refetch();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (query.isLoading || query.isError || !classDetails) {
     return (
@@ -124,6 +189,7 @@ const ClassesShow = () => {
   )}`;
 
   const status = classDetails.status ?? "unknown";
+  const capacityWarning = classDetails.capacity && enrolledStudents.length >= classDetails.capacity;
 
   return (
     <ShowView className="class-view class-show space-y-6">
@@ -161,13 +227,16 @@ const ClassesShow = () => {
               <p>{classDetails.description}</p>
             </div>
 
-            <div>
+            <div className="flex flex-wrap gap-2">
               <Badge variant="outline">{classDetails.capacity} spots</Badge>
               <Badge
                 variant={status === "active" ? "default" : "secondary"}
                 data-status={status}
               >
                 {status.toUpperCase()}
+              </Badge>
+              <Badge variant={capacityWarning ? "destructive" : "secondary"}>
+                {enrolledStudents.length}/{classDetails.capacity} enrolled
               </Badge>
             </div>
           </div>
@@ -218,18 +287,48 @@ const ClassesShow = () => {
 
         {/* Join Class Section */}
         <div className="join">
-          <h2>🎓 Join Class</h2>
+          <h2>🎓 Class Access</h2>
 
           <ol>
-            <li>Ask your teacher for the invite code.</li>
-            <li>Click on &quot;Join Class&quot; button.</li>
-            <li>Paste the code and click &quot;Join&quot;</li>
+            <li>Share the invite code below with students.</li>
+            <li>Use the enrollment panel to add students manually.</li>
+            <li>Monitor capacity warnings when the class reaches its limit.</li>
           </ol>
+          <div className="mt-3 rounded-md border border-border bg-muted/20 p-3">
+            <p className="text-sm font-medium">Invite code</p>
+            <p className="text-lg font-semibold tracking-[0.2em]">{classDetails.inviteCode ?? "Unavailable"}</p>
+          </div>
         </div>
+      </Card>
 
-        <Button size="lg" className="w-full">
-          Join Class
-        </Button>
+      <Card className="hover:shadow-md transition-shadow">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Enroll Students</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+              <SelectTrigger className="w-full md:w-80">
+                <SelectValue placeholder="Choose a student" />
+              </SelectTrigger>
+              <SelectContent>
+                {students.map((student) => (
+                  <SelectItem key={student.id} value={student.id}>
+                    {student.name} ({student.email})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={handleEnrollStudent} disabled={!selectedStudentId || isSubmitting}>
+              {isSubmitting ? "Working..." : "Enroll Student"}
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {students.length === 0
+              ? "No student accounts are available yet."
+              : "Select a student to add them to this class."}
+          </p>
+        </CardContent>
       </Card>
 
       <Card className="hover:shadow-md transition-shadow">
@@ -254,3 +353,6 @@ const getInitials = (name = "") => {
 };
 
 export default ClassesShow;
+
+
+// 7:27:27
