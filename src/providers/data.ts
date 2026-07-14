@@ -49,7 +49,6 @@ const options: CreateDataProviderOptions = {
 
           filters?.forEach((filter) => {
             const field = 'field' in filter ? filter.field : ' ';
-
             const value = String(filter.value)
 
             if (resource === 'subjects') {
@@ -61,6 +60,16 @@ const options: CreateDataProviderOptions = {
               if (field === 'name') params.search = value;
               if (field === 'subject') params.subject = value;
               if (field === 'teacher') params.teacher = value;
+              if (field === 'status') params.status = value;
+            }
+
+            if (resource === 'users') {
+              if (field === 'search' || field === 'name' || field === 'email') params.search = value;
+              if (field === 'role') params.role = value;
+            }
+
+            if (resource === 'departments') {
+              if (field === 'name' || field === 'code') params.search = value;
             }
           })
 
