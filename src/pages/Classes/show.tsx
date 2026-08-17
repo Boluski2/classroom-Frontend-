@@ -141,8 +141,8 @@ const ClassesShow = () => {
     setIsSubmitting(true);
     try {
       await createEnrollment({
-        resource: `classes/${classId}/enroll`,
-        values: { studentId: selectedStudentId },
+        resource: "enrollments",
+        values: { classId: Number(classId), studentId: selectedStudentId },
       });
       setSelectedStudentId("");
       await enrolledQuery.refetch();
@@ -157,8 +157,8 @@ const ClassesShow = () => {
     setIsSubmitting(true);
     try {
       await removeEnrollment({
-        resource: `classes/${classId}/enroll/${studentId}`,
-        id: studentId,
+        resource: "enrollments",
+        id: `${classId}/${studentId}`,
       });
       await enrolledQuery.refetch();
     } finally {

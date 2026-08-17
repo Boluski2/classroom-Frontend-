@@ -7,7 +7,7 @@ import routerProvider, {
   NavigateToResource,
   UnsavedChangesNotifier,
 } from "@refinedev/react-router";
-import { BrowserRouter, Outlet, Route, Routes } from "react-router";
+import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
 import "./App.css";
 import { Toaster } from "./components/refine-ui/notification/toaster";
 import { useNotificationProvider } from "./components/refine-ui/notification/use-notification-provider";
@@ -17,7 +17,7 @@ import {
   Building2,
   ClipboardCheck,
   GraduationCap,
-  Home,
+  Home as HomeIcon,
   Users,
 } from "lucide-react";
 import SubjectsList from "./pages/subjects/list";
@@ -39,7 +39,11 @@ import UsersCreate from "./pages/users/create";
 import EnrollmentsCreate from "./pages/enrollments/create";
 import EnrollmentsJoin from "./pages/enrollments/join";
 import EnrollmentConfirm from "./pages/enrollments/confirm";
-import Dashboard from "./pages/Dashboard";
+import Home from "./pages/home";
+import AdminDashboard from "./pages/admin-dashboard";
+import TeacherDashboard from "./pages/teacher-dashboard";
+import StudentDashboard from "./pages/student-dashboard";
+import RegistrationCodesPage from "./pages/registration-codes";
 import ClassesList from "./pages/Classes/list";
 import ClassesCreate from "./pages/Classes/create";
 // import ClassesEdit from "./pages/Classes/edit";
@@ -73,7 +77,7 @@ function App() {
                   list: "/",
                   meta: {
                     label: "Home",
-                    icon: <Home />,
+                    icon: <HomeIcon />,
                   },
                 },
                 {
@@ -119,6 +123,14 @@ function App() {
                   },
                 },
                 {
+                  name: "registration-codes",
+                  list: "/registration-codes",
+                  meta: {
+                    label: "Registration Codes",
+                    icon: <ClipboardCheck />,
+                  },
+                },
+                {
                   name: "classes",
                   list: "/classes",
                   create: "/classes/create",
@@ -140,6 +152,9 @@ function App() {
                   }
                 >
                   <Route path="/login" element={<Login />} />
+                  <Route path="/admin/login" element={<Login portal="admin" />} />
+                  <Route path="/teacher/login" element={<Login portal="teacher" />} />
+                  <Route path="/student/login" element={<Login portal="student" />} />
                   <Route path="/register" element={<Register />} />
                 </Route>
 
@@ -152,7 +167,10 @@ function App() {
                     </Authenticated>
                   }
                 >
-                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/" element={<Home />} />
+                  <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/teacher" element={<TeacherDashboard />} />
+                  <Route path="/student" element={<StudentDashboard />} />
 
                   <Route path="subjects">
                     <Route index element={<SubjectsList />} />
@@ -185,6 +203,7 @@ function App() {
                     <Route path="join" element={<EnrollmentsJoin />} />
                     <Route path="confirm" element={<EnrollmentConfirm />} />
                   </Route>
+                  <Route path="registration-codes" element={<RegistrationCodesPage />} />
 
                   <Route path="classes">
                     <Route index element={<ClassesList />} />

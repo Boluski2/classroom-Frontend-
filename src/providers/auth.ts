@@ -68,12 +68,54 @@ export const authProvider: AuthProvider = {
         };
       }
 
+      if (!data?.user) {
+        return {
+          success: false,
+          error: {
+            name: "Login failed",
+            message: "Unable to retrieve user profile.",
+          },
+        };
+      }
+
+      const rawUser = data.user as unknown as Record<string, unknown>;
+
+      if (!rawUser.role || typeof rawUser.role !== "string") {
+        return {
+          success: false,
+          error: {
+            name: "Login failed",
+            message: "User role is missing from login response.",
+          },
+        };
+      }
+
+      const user: User = {
+        id: String(rawUser.id ?? ""),
+        createdAt: String(rawUser.createdAt ?? ""),
+        updatedAt: String(rawUser.updatedAt ?? ""),
+        email: String(rawUser.email ?? ""),
+        name: String(rawUser.name ?? ""),
+        role: rawUser.role as User["role"],
+        image: typeof rawUser.image === "string" ? rawUser.image : undefined,
+        imageCldPubId: typeof rawUser.imageCldPubId === "string" ? rawUser.imageCldPubId : undefined,
+      };
+
       // Store user data
-      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("user", JSON.stringify(user));
+
+      const redirectTo =
+        user.role === "admin"
+          ? "/admin"
+          : user.role === "teacher"
+          ? "/teacher"
+          : user.role === "student"
+          ? "/student"
+          : "/";
 
       return {
         success: true,
-        redirectTo: "/",
+        redirectTo,
       };
     } catch (error) {
       console.error("Login exception:", error);
@@ -117,23 +159,66 @@ export const authProvider: AuthProvider = {
     return { error };
   },
   check: async () => {
-    const user = localStorage.getItem("user");
+    try {
+      const { data, error } = await authClient.getSession();
 
-    if (user) {
+      if (error || !data?.user) {
+        return {
+          authenticated: false,
+          logout: true,
+          redirectTo: "/login",
+          error: {
+            name: "Unauthorized",
+            message: error?.message || "Session not found.",
+          },
+        };
+      }
+
+      const rawUser = data.user as unknown as Record<string, unknown>;
+
+      if (!rawUser.role || typeof rawUser.role !== "string") {
+        return {
+          authenticated: false,
+          logout: true,
+          redirectTo: "/login",
+          error: {
+            name: "Unauthorized",
+            message: "User role is missing from session data.",
+          },
+        };
+      }
+
+      const user: User = {
+        id: String(rawUser.id ?? ""),
+        createdAt: String(rawUser.createdAt ?? ""),
+        updatedAt: String(rawUser.updatedAt ?? ""),
+        email: String(rawUser.email ?? ""),
+        name: String(rawUser.name ?? ""),
+        role: rawUser.role as User["role"],
+        image: typeof rawUser.image === "string" ? rawUser.image : undefined,
+        imageCldPubId:
+          typeof rawUser.imageCldPubId === "string"
+            ? rawUser.imageCldPubId
+            : undefined,
+      };
+
+      localStorage.setItem("user", JSON.stringify(user));
+
       return {
         authenticated: true,
       };
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      return {
+        authenticated: false,
+        logout: true,
+        redirectTo: "/login",
+        error: {
+          name: "Unauthorized",
+          message: "Check failed",
+        },
+      };
     }
-
-    return {
-      authenticated: false,
-      logout: true,
-      redirectTo: "/login",
-      error: {
-        name: "Unauthorized",
-        message: "Check failed",
-      },
-    };
   },
   getPermissions: async () => {
     const user = localStorage.getItem("user");
@@ -146,18 +231,55 @@ export const authProvider: AuthProvider = {
     };
   },
   getIdentity: async () => {
-    const user = localStorage.getItem("user");
+    const storedUser = localStorage.getItem("user");
 
-    if (!user) return null;
-    const parsedUser: User = JSON.parse(user);
+    if (storedUser) {
+      const parsedUser: User = JSON.parse(storedUser);
 
-    return {
-      id: parsedUser.id,
-      name: parsedUser.name,
-      email: parsedUser.email,
-      image: parsedUser.image,
-      role: parsedUser.role,
-      imageCldPubId: parsedUser.imageCldPubId,
-    };
+      return {
+        id: parsedUser.id,
+        name: parsedUser.name,
+        email: parsedUser.email,
+        image: parsedUser.image,
+        role: parsedUser.role,
+        imageCldPubId: parsedUser.imageCldPubId,
+      };
+    }
+
+    try {
+      const { data, error } = await authClient.getSession();
+      if (error || !data?.user) return null;
+
+      const rawUser = data.user as unknown as Record<string, unknown>;
+      if (!rawUser.role || typeof rawUser.role !== "string") return null;
+
+      const user: User = {
+        id: String(rawUser.id ?? ""),
+        createdAt: String(rawUser.createdAt ?? ""),
+        updatedAt: String(rawUser.updatedAt ?? ""),
+        email: String(rawUser.email ?? ""),
+        name: String(rawUser.name ?? ""),
+        role: rawUser.role as User["role"],
+        image: typeof rawUser.image === "string" ? rawUser.image : undefined,
+        imageCldPubId:
+          typeof rawUser.imageCldPubId === "string"
+            ? rawUser.imageCldPubId
+            : undefined,
+      };
+
+      localStorage.setItem("user", JSON.stringify(user));
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+        role: user.role,
+        imageCldPubId: user.imageCldPubId,
+      };
+    } catch (error) {
+      console.error("Failed to load identity:", error);
+      return null;
+    }
   },
 };

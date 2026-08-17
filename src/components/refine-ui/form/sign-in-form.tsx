@@ -36,7 +36,11 @@ const signInSchema = z.object({
 
 type SignInFormValues = z.infer<typeof signInSchema>;
 
-export const SignInForm = () => {
+type SignInFormProps = {
+  portal?: "admin" | "teacher" | "student" | "system";
+};
+
+export const SignInForm = ({ portal = "system" }: SignInFormProps) => {
   const Link = useLink();
 
   const { mutate: login, isPending: isLoggingIn } = useLogin();
@@ -57,6 +61,24 @@ export const SignInForm = () => {
     });
   };
 
+  const isAdminPortal = portal === "admin";
+  const isTeacherPortal = portal === "teacher";
+  const isStudentPortal = portal === "student";
+  const title = isAdminPortal
+    ? "Administrator Sign in"
+    : isStudentPortal
+    ? "Student Sign in"
+    : isTeacherPortal
+    ? "Teacher Sign in"
+    : "Sign in";
+  const description = isAdminPortal
+    ? "Use your admin credentials to manage the school portal."
+    : isStudentPortal
+    ? "Use your student credentials to access classes, subjects, and enrollment."
+    : isTeacherPortal
+    ? "Use your teacher credentials to manage your classes and registration codes."
+    : "Welcome back. Sign in to continue.";
+
   return (
     <div className="sign-in">
       <div className="logo">
@@ -65,9 +87,9 @@ export const SignInForm = () => {
 
       <Card className="card">
         <CardHeader className="header">
-          <CardTitle className="title">Sign in</CardTitle>
+          <CardTitle className="title">{title}</CardTitle>
           <CardDescription className="description">
-            Welcome back
+            {description}
           </CardDescription>
         </CardHeader>
 
@@ -201,8 +223,16 @@ export const SignInForm = () => {
         <Separator className="divider" />
 
         <CardFooter className="footer">
-          <span>No account?</span>
-          <Link to="/register"> Sign up</Link>
+          {isAdminPortal ? (
+            <span>Need an administrator account? Contact your system administrator for access.</span>
+          ) : isTeacherPortal ? (
+            <span>Need a teacher account? Contact your administrator to provision access.</span>
+          ) : (
+            <>
+              <span>No account?</span>
+              <Link to="/register"> Sign up</Link>
+            </>
+          )}
         </CardFooter>
       </Card>
     </div>

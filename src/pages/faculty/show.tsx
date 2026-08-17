@@ -6,6 +6,7 @@ import { useParams } from "react-router";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/refine-ui/data-table/data-table";
 import { ShowButton } from "@/components/refine-ui/buttons/show";
@@ -13,6 +14,7 @@ import {
   ShowView,
   ShowViewHeader,
 } from "@/components/refine-ui/views/show-view";
+import { useLogout } from "@refinedev/core";
 import type { User } from "@/types";
 
 type FacultyDepartment = {
@@ -208,9 +210,12 @@ const FacultyShow = () => {
       <ShowViewHeader resource="users" title={user.name} />
 
       <Card className="hover:shadow-md transition-shadow">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Profile</CardTitle>
-          <Badge variant="default">{user.role}</Badge>
+        <CardHeader className="flex flex-row items-center justify-between gap-4">
+          <div>
+            <CardTitle>Profile</CardTitle>
+            <Badge variant="default">{user.role}</Badge>
+          </div>
+          <LogoutButton />
         </CardHeader>
         <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
@@ -252,6 +257,21 @@ const FacultyShow = () => {
         </Card>
       </div>
     </ShowView>
+  );
+};
+
+const LogoutButton = () => {
+  const { mutate: logout, isPending: isLoggingOut } = useLogout();
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => logout()}
+      className="ml-auto"
+    >
+      {isLoggingOut ? "Signing out..." : "Sign Out"}
+    </Button>
   );
 };
 

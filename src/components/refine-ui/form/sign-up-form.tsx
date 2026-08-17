@@ -1,4 +1,4 @@
-import { useRegister, useLink } from "@refinedev/core";
+import { useCreate, useLink } from "@refinedev/core";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -21,18 +21,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { cn } from "@/lib/utils";
 
-import { ROLE_OPTIONS } from "@/constants";
 import UploadWidget from "@/components/upload-widget";
-import { UserRole } from "@/types";
 import { toast } from "sonner";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   name: z.string().min(3, "Full name must be at least 3 characters"),
-  role: z.nativeEnum(UserRole),
+  inviteCode: z.string().min(3, "Invite code is required"),
   image: z.string().optional(),
   imageCldPubId: z.string().optional(),
 });
@@ -41,7 +38,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export const SignUpForm = () => {
   const Link = useLink();
-  const { mutate: register, isPending: isRegistering } = useRegister();
+  const { mutate: register, isPending: isRegistering } = useCreate();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -49,7 +46,7 @@ export const SignUpForm = () => {
       email: "",
       password: "",
       name: "",
-      role: UserRole.STUDENT,
+      inviteCode: "",
       image: "",
       imageCldPubId: "",
     },
@@ -59,29 +56,30 @@ export const SignUpForm = () => {
 
   const onSubmit = async (values: RegisterFormValues) => {
     try {
-      register(
-        {
-          ...values,
+      const response = await register({
+        resource: "register",
+        values: {
+          email: values.email,
+          password: values.password,
           name: values.name,
+          inviteCode: values.inviteCode,
           image: values.image || undefined,
           imageCldPubId: values.imageCldPubId || undefined,
         },
-        {
-          onSuccess: (data) => {
-            if (data.success === false) {
-              toast.error(data.error?.message, {
-                richColors: true,
-              });
-              return;
-            }
+      });
 
-            toast.success("Account created successfully!", {
-              richColors: true,
-            });
-            form.reset();
-          },
-        }
-      );
+      if (response?.data?.error) {
+        toast.error(response.data.error, {
+          richColors: true,
+        });
+        return;
+      }
+
+      toast.success("Student account created successfully!", {
+        richColors: true,
+      });
+      form.reset();
+      window.location.href = "/student/login";
     } catch (error) {
       console.error("Registration error:", error);
       toast.error("Registration failed", {
@@ -107,32 +105,14 @@ export const SignUpForm = () => {
         <CardContent className="content">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="form">
-              {/* User Type Selection */}
               <FormField
                 control={form.control}
-                name="role"
+                name="inviteCode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Role *</FormLabel>
+                    <FormLabel>Invite Code *</FormLabel>
                     <FormControl>
-                      <div className="roles">
-                        {ROLE_OPTIONS.map((role) => {
-                          return (
-                            <button
-                              key={role.value}
-                              type="button"
-                              onClick={() => field.onChange(role.value)}
-                              className={cn(
-                                "role-button",
-                                field.value === role.value && "is-active"
-                              )}
-                            >
-                              <role.icon />
-                              <span>{role.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
+                      <Input placeholder="Enter the code from your teacher" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

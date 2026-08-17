@@ -121,7 +121,9 @@ const options: CreateDataProviderOptions = {
   },
 };
 
-// Create the data provider using the base URL and options
-const {dataProvider} = createDataProvider(BACKEND_BASE_URL, options);
+// Create the data provider using the base URL, options, and credentialed fetch settings
+const {dataProvider} = createDataProvider(BACKEND_BASE_URL, options, {
+  credentials: "include",
+});
 
 export { dataProvider };
