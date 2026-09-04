@@ -36,9 +36,8 @@ const registrationCodeSchema = z.object({
   usageLimit: z
     .string()
     .optional()
-    .transform((value) => (value ? Number(value) : undefined))
     .refine(
-      (value) => value === undefined || value >= 1,
+      (value) => value === undefined || value === "" || Number(value) >= 1,
       "Usage limit must be at least 1"
     ),
 });
@@ -82,7 +81,7 @@ const RegistrationCodesPage = () => {
           classId: values.classId,
           code: values.code || undefined,
           expiresAt: values.expiresAt || undefined,
-          usageLimit: values.usageLimit || undefined,
+          usageLimit: values.usageLimit ? Number(values.usageLimit) : undefined,
         },
       });
       toast.success("Registration code created.");

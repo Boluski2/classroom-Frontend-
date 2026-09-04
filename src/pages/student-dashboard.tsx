@@ -1,19 +1,13 @@
 import { useMemo } from "react";
-import { useGetIdentity, useList, useLink, useLogout } from "@refinedev/core";
-import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { BookOpen, ClipboardCheck, Layers, Users } from "lucide-react";
-
+import { useGetIdentity, useList, useLink } from "@refinedev/core";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { BookOpen, FileText, BarChart3, Calendar, Bell, Plus } from "lucide-react";
 import type { ClassDetails, Subject, User } from "@/types";
-
-const subjectColors = ["#0ea5e9", "#f97316", "#a855f7", "#22c55e"];
 
 const StudentDashboard = () => {
   const Link = useLink();
-  const { mutate: logout, isPending: isLoggingOut } = useLogout();
   const { data: identity } = useGetIdentity<User>();
 
   const { query: subjectsQuery } = useList<Subject>({
@@ -28,157 +22,219 @@ const StudentDashboard = () => {
   const subjects = subjectsQuery.data?.data ?? [];
   const classes = classesQuery.data?.data ?? [];
 
-  const classesBySubject = useMemo(() => {
-    const counts = classes.reduce<Record<string, number>>((acc, classItem) => {
-      const subjectName = classItem.subject?.name ?? "Unassigned";
-      acc[subjectName] = (acc[subjectName] || 0) + 1;
-      return acc;
-    }, {});
-
-    return Object.entries(counts).map(([subjectName, totalClasses]) => ({
-      subjectName,
-      totalClasses,
-    }));
+  // For demo purposes: filter classes where capacity > 0 (enrolled students)
+  const myClasses = useMemo(() => {
+    return classes.filter((c) => c.capacity && c.capacity > 0).slice(0, 6);
   }, [classes]);
 
-  const topSubjects = useMemo(() => {
-    return [...classesBySubject]
-      .sort((a, b) => b.totalClasses - a.totalClasses)
-      .slice(0, 5)
-      .map((item, index) => ({
-        ...item,
-        id: index,
-      }));
-  }, [classesBySubject]);
+  const stats = useMemo(() => {
+    return {
+      enrolledClasses: myClasses.length,
+      pendingAssignments: 5,
+      averageGrade: 85,
+      attendance: 92,
+    };
+  }, [myClasses]);
 
   if (identity?.role !== "student") {
     return (
-      <Card>
+      <Card className="mt-10 mx-auto w-full max-w-md">
         <CardHeader>
-          <CardTitle>Access Restricted</CardTitle>
+          <CardTitle className="text-red-600">Access Restricted</CardTitle>
         </CardHeader>
         <CardContent>
-          This dashboard is designed for students. Please use your assigned portal.
+          This is a learning portal for students. Please sign in with your student account.
         </CardContent>
       </Card>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="page-title">Student Dashboard</h1>
-          <p className="text-muted-foreground">
-            Track your classes, subjects, and enrollment options from one place.
-          </p>
+  const StatCard = ({ icon: Icon, label, value, unit }: any) => (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground font-medium">{label}</p>
+            <p className="text-3xl font-bold mt-1">
+              {value}
+              <span className="text-lg text-muted-foreground ml-1">{unit}</span>
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-teal-500 opacity-20">
+            <Icon className="h-6 w-6 text-teal-600" />
+          </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => logout()}>
-          {isLoggingOut ? "Signing out..." : "Sign Out"}
-        </Button>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="border-b pb-6">
+        <h1 className="text-4xl font-bold tracking-tight">Welcome, {identity?.name}!</h1>
+        <p className="text-lg text-muted-foreground mt-2">Your personalized learning portal</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="rounded-lg border border-border bg-muted/20 p-4 hover:border-primary/40 hover:bg-muted/40 transition-colors">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground">Available Classes</p>
-              <div className="mt-2 text-2xl font-semibold">{classes.length}</div>
-            </div>
-            <Layers className="h-5 w-5 text-rose-600" />
-          </div>
-        </Card>
-        <Card className="rounded-lg border border-border bg-muted/20 p-4 hover:border-primary/40 hover:bg-muted/40 transition-colors">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground">Subjects</p>
-              <div className="mt-2 text-2xl font-semibold">{subjects.length}</div>
-            </div>
-            <BookOpen className="h-5 w-5 text-sky-600" />
-          </div>
-        </Card>
-        <Card className="rounded-lg border border-border bg-muted/20 p-4 hover:border-primary/40 hover:bg-muted/40 transition-colors">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground">Your Role</p>
-              <div className="mt-2 text-2xl font-semibold">{identity?.role}</div>
-            </div>
-            <Users className="h-5 w-5 text-cyan-600" />
-          </div>
-        </Card>
-        <Card className="rounded-lg border border-border bg-muted/20 p-4 hover:border-primary/40 hover:bg-muted/40 transition-colors">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground">Enrollment</p>
-              <div className="mt-2 text-2xl font-semibold">Quick</div>
-            </div>
-            <ClipboardCheck className="h-5 w-5 text-emerald-600" />
-          </div>
-        </Card>
+      {/* Quick Stats */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Your Progress</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            icon={BookOpen}
+            label="Enrolled Classes"
+            value={stats.enrolledClasses}
+            unit=""
+          />
+          <StatCard
+            icon={FileText}
+            label="Pending Assignments"
+            value={stats.pendingAssignments}
+            unit=""
+          />
+          <StatCard
+            icon={BarChart3}
+            label="Average Grade"
+            value={stats.averageGrade}
+            unit="%"
+          />
+          <StatCard
+            icon={Calendar}
+            label="Attendance"
+            value={stats.attendance}
+            unit="%"
+          />
+        </div>
       </div>
 
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader>
-          <CardTitle>Recommended Courses</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {topSubjects.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No course recommendations are available yet.</p>
-            ) : (
-              topSubjects.map((subject) => (
-                <div
-                  key={subject.id}
-                  className="rounded-md border border-border p-4"
-                >
-                  <p className="text-sm font-semibold">{subject.subjectName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {subject.totalClasses} classes available
-                  </p>
+      {/* Next Class & Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Next Class */}
+        <div className="lg:col-span-2">
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="border-b">
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-teal-600" />
+                Next Class
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {myClasses.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">No classes yet</p>
+                  <Link to="/student/classes">
+                    <Button size="sm">Join Your First Class</Button>
+                  </Link>
                 </div>
-              ))
-            )}
-          </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="border-l-4 border-teal-500 pl-4 py-2">
+                    <p className="text-lg font-semibold">{myClasses[0].name}</p>
+                    <p className="text-sm text-muted-foreground">{myClasses[0].subject?.name}</p>
+                    <p className="text-sm text-muted-foreground mt-1">Teacher: {myClasses[0].teacher?.name}</p>
+                    {myClasses[0].status === "active" && (
+                      <Badge className="mt-3 bg-teal-600">Class Starting Soon</Badge>
+                    )}
+                  </div>
+                  <Link to={`/student/classes`}>
+                    <Button className="w-full bg-teal-600 hover:bg-teal-700">
+                      Open Classes
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="border-b">
+            <CardTitle className="text-lg">Quick Links</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-3">
+            <Link to="/student/classes">
+              <Button className="w-full bg-teal-600 hover:bg-teal-700 gap-2">
+                <Plus className="h-4 w-4" />
+                Join Class
+              </Button>
+            </Link>
+            <Link to="/student/assignments">
+              <Button variant="outline" className="w-full">
+                My Assignments
+              </Button>
+            </Link>
+            <Link to="/student/grades">
+              <Button variant="outline" className="w-full">
+                View Grades
+              </Button>
+            </Link>
+            <Link to="/student/notifications">
+              <Button variant="outline" className="w-full gap-2">
+                <Bell className="h-4 w-4" />
+                Notifications
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* My Classes */}
+      {myClasses.length > 0 && (
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="border-b">
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-teal-600" />
+              My Classes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {myClasses.map((cls) => (
+                <div
+                  key={cls.id}
+                  className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-linear-to-br from-teal-50 to-cyan-50"
+                >
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="font-semibold text-base">{cls.name}</h3>
+                      <p className="text-xs text-muted-foreground mt-1">{cls.subject?.name}</p>
+                    </div>
+                    <div className="space-y-1 text-sm">
+                      <p className="text-muted-foreground">
+                        <strong>Teacher:</strong> {cls.teacher?.name || "TBA"}
+                      </p>
+                      {cls.status === "active" && (
+                        <Badge className="mt-2 bg-teal-600 text-xs">🔴 Active Now</Badge>
+                      )}
+                    </div>
+                    <Link to={`/student/classes`}>
+                      <Button size="sm" variant="outline" className="w-full">
+                        Open Class
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Learning Resources */}
+      <Card className="hover:shadow-lg transition-shadow border-l-4 border-teal-500">
+        <CardHeader className="border-b">
+          <CardTitle>Learning Tips</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <ul className="space-y-2 text-sm text-muted-foreground">
+            <li>✓ Check your assignments regularly and submit on time</li>
+            <li>✓ Join live classes to interact with your teacher</li>
+            <li>✓ Review your grades and feedback to improve</li>
+            <li>✓ Ask questions during class sessions</li>
+          </ul>
         </CardContent>
       </Card>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle>Student Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button asChild>
-              <Link to="/enrollments/join" className="w-full justify-center">
-                Join a class
-              </Link>
-            </Button>
-            <Button variant="secondary" asChild>
-              <Link to="/classes" className="w-full justify-center">
-                Browse all classes
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle>Need help?</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              If you need admin support, ask your administrator or visit the admin portal.
-            </p>
-            <Button variant="outline" asChild>
-              <Link to="/admin" className="w-full justify-center">
-                Open Admin Dashboard
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Separator />
     </div>
   );
 };

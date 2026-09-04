@@ -31,7 +31,27 @@ const userSchema = z.object({
   name: z.string().min(2, "Name is required"),
   email: z.string().email("Valid email is required"),
   role: z.enum(["admin", "teacher", "student"]),
+  password: z.string().optional(),
   emailVerified: z.boolean().optional(),
+}).superRefine((values, context) => {
+  if ((values.role === "admin" || values.role === "teacher") && !values.password) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["password"],
+      message: "Password is required for teacher and admin accounts",
+    });
+  }
+
+  if (values.password && values.password.length < 8) {
+    context.addIssue({
+      code: z.ZodIssueCode.too_small,
+      path: ["password"],
+      minimum: 8,
+      inclusive: true,
+      type: "string",
+      message: "Password must be at least 8 characters",
+    });
+  }
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -51,6 +71,7 @@ const UsersCreate = () => {
       name: "",
       email: "",
       role: "student",
+      password: "",
       emailVerified: false,
     },
   });
@@ -149,6 +170,19 @@ const UsersCreate = () => {
                           <SelectItem value="student">Student</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="At least 8 characters" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

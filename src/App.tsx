@@ -21,7 +21,8 @@ import {
   Users,
 } from "lucide-react";
 import SubjectsList from "./pages/subjects/list";
-import { Layout } from "./components/refine-ui/layout/layout";
+import { RoleBasedLayout } from "./components/layouts/role-based-layout";
+import { RoleGuard } from "./components/layouts/role-guard";
 import SubjectsCreate from "./pages/subjects/create";
 import SubjectsShow from "./pages/subjects/show";
 
@@ -54,6 +55,11 @@ import DepartmentsEdit from "./pages/departments/edit";
 import UsersEdit from "./pages/users/edit";
 import ClassesEdit from "./pages/Classes/edit";
 import SubjectsEdit from "./pages/subjects/edit";
+import AdminTeachersPage from "./pages/admin/teachers";
+import AdminStudentsPage from "./pages/admin/students";
+import AdminReportsPage from "./pages/admin/reports";
+import AdminAnalyticsPage from "./pages/admin/analytics";
+import { UserRole } from "./types";
 
 function App() {
   return (
@@ -161,16 +167,28 @@ function App() {
                 <Route
                   element={
                     <Authenticated key="private-routes" fallback={<Login />}>
-                      <Layout>
+                      <RoleBasedLayout>
                         <Outlet />
-                      </Layout>
+                      </RoleBasedLayout>
                     </Authenticated>
                   }
                 >
                   <Route path="/" element={<Home />} />
-                  <Route path="/admin" element={<AdminDashboard />} />
-                  <Route path="/teacher" element={<TeacherDashboard />} />
-                  <Route path="/student" element={<StudentDashboard />} />
+                  <Route element={<RoleGuard allowedRoles={[UserRole.ADMIN]} />}>
+                    <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/admin/teachers" element={<AdminTeachersPage />} />
+                    <Route path="/admin/students" element={<AdminStudentsPage />} />
+                    <Route path="/admin/classes" element={<ClassesList />} />
+                    <Route path="/admin/departments" element={<DepartmentsList />} />
+                    <Route path="/admin/reports" element={<AdminReportsPage />} />
+                    <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
+                  </Route>
+                  <Route element={<RoleGuard allowedRoles={[UserRole.TEACHER]} />}>
+                    <Route path="/teacher" element={<TeacherDashboard />} />
+                  </Route>
+                  <Route element={<RoleGuard allowedRoles={[UserRole.STUDENT]} />}>
+                    <Route path="/student" element={<StudentDashboard />} />
+                  </Route>
 
                   <Route path="subjects">
                     <Route index element={<SubjectsList />} />

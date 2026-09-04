@@ -112,6 +112,16 @@ export type ClassDetails = {
   inviteCode?: string;
 };
 
+export type RegistrationCode = {
+  id: number;
+  classId: number;
+  code: string;
+  expiresAt?: string | null;
+  usageLimit?: number | null;
+  usesCount: number;
+  class?: ClassDetails;
+};
+
 export type SignUpPayload = {
   email: string;
   name: string;

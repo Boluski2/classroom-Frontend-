@@ -1,36 +1,39 @@
 import { useMemo } from "react";
-import { useGetIdentity, useLink, useList, useLogout } from "@refinedev/core";
+import { useGetIdentity, useList, useLink } from "@refinedev/core";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Clock, BookOpen, Users, AlertCircle, Plus, Play } from "lucide-react";
 import type { ClassDetails, User } from "@/types";
 
 const TeacherDashboard = () => {
   const Link = useLink();
-  const { mutate: logout, isPending: isLoggingOut } = useLogout();
   const { data: identity } = useGetIdentity<User>();
   const { query: classesQuery } = useList<ClassDetails>({
     resource: "classes",
     pagination: { mode: "off" },
   });
-  const { query: codesQuery } = useList({
-    resource: "registration-codes",
-    pagination: { mode: "off" },
-  });
 
   const classes = classesQuery.data?.data ?? [];
-  const codes = codesQuery.data?.data ?? [];
 
   const ownClasses = useMemo(() => {
     return classes.filter((classItem) => classItem.teacher?.id === identity?.id);
   }, [classes, identity?.id]);
 
+  const classStats = useMemo(() => {
+    return {
+      totalClasses: ownClasses.length,
+      activeClasses: ownClasses.filter((c) => c.status === "active").length,
+      totalStudents: ownClasses.reduce((sum, c) => sum + (c.capacity || 0), 0),
+      totalSchedules: ownClasses.reduce((sum, c) => sum + (c.schedules?.length || 0), 0),
+    };
+  }, [ownClasses]);
+
   if (identity?.role !== "teacher") {
     return (
-      <Card>
+      <Card className="mt-10 mx-auto w-full max-w-md">
         <CardHeader>
-          <CardTitle>Access Restricted</CardTitle>
+          <CardTitle className="text-red-600">Access Restricted</CardTitle>
         </CardHeader>
         <CardContent>
           This dashboard is only available for teachers. Please sign in with a teacher account.
@@ -39,97 +42,181 @@ const TeacherDashboard = () => {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="page-title">Teacher Dashboard</h1>
-          <p className="text-muted-foreground">
-            Manage your classes, generate student registration codes, and track enrollments.
-          </p>
+  const StatCard = ({ icon: Icon, label, value, color }: any) => (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground font-medium">{label}</p>
+            <p className="text-3xl font-bold mt-1">{value}</p>
+          </div>
+          <div className={`p-3 rounded-lg ${color} opacity-20`}>
+            <Icon className={`h-6 w-6 ${color.replace("bg-", "text-")}`} />
+          </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => logout()}>
-          {isLoggingOut ? "Signing out..." : "Sign Out"}
-        </Button>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="border-b pb-6">
+        <h1 className="text-4xl font-bold tracking-tight">Welcome back, {identity?.name}!</h1>
+        <p className="text-lg text-muted-foreground mt-2">Manage your classes and track student progress</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card className="rounded-lg border border-border bg-muted/20 p-4 hover:border-primary/40 hover:bg-muted/40 transition-colors">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground">My classes</p>
-              <div className="mt-2 text-2xl font-semibold">{ownClasses.length}</div>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="rounded-lg border border-border bg-muted/20 p-4 hover:border-primary/40 hover:bg-muted/40 transition-colors">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground">Registration codes</p>
-              <div className="mt-2 text-2xl font-semibold">{codes.length}</div>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="rounded-lg border border-border bg-muted/20 p-4 hover:border-primary/40 hover:bg-muted/40 transition-colors">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground">Total classes</p>
-              <div className="mt-2 text-2xl font-semibold">{classes.length}</div>
-            </div>
-          </div>
-        </Card>
+      {/* Quick Stats */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Overview</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            icon={BookOpen}
+            label="My Classes"
+            value={classStats.totalClasses}
+            color="bg-indigo-500"
+          />
+          <StatCard
+            icon={Users}
+            label="Total Students"
+            value={classStats.totalStudents}
+            color="bg-blue-500"
+          />
+          <StatCard
+            icon={Clock}
+            label="Scheduled Sessions"
+            value={classStats.totalSchedules}
+            color="bg-green-500"
+          />
+          <StatCard
+            icon={AlertCircle}
+            label="Pending Tasks"
+            value="0"
+            color="bg-orange-500"
+          />
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle>Your classes</CardTitle>
+      {/* Today's Schedule & Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Today's Schedule */}
+        <div className="lg:col-span-2">
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="border-b">
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-indigo-600" />
+                Today's Schedule
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {ownClasses.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">No classes yet</p>
+                  <Link to="/teacher/classes">
+                    <Button size="sm">Create Your First Class</Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {ownClasses.slice(0, 5).map((cls) => (
+                    <div
+                      key={cls.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium">{cls.name}</p>
+                        <p className="text-sm text-muted-foreground">{cls.subject?.name || "Subject TBA"}</p>
+                      </div>
+                      <Badge variant={cls.status === "active" ? "default" : "outline"}>
+                        {cls.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="border-b">
+            <CardTitle className="text-lg">Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent>
-            {ownClasses.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                You currently have no classes assigned. Use the class management page to add a new class.
-              </p>
-            ) : (
-              <div className="grid gap-3">
-                {ownClasses.slice(0, 5).map((classItem) => (
-                  <div
-                    key={classItem.id}
-                    className="rounded-md border border-border p-3"
-                  >
-                    <p className="text-sm font-semibold">{classItem.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {classItem.subject?.name ?? "No subject"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
+          <CardContent className="p-6 space-y-3">
+            <Link to="/teacher/classes">
+              <Button className="w-full bg-indigo-600 hover:bg-indigo-700 gap-2">
+                <Plus className="h-4 w-4" />
+                Create Class
+              </Button>
+            </Link>
+            <Link to="/teacher/assignments">
+              <Button variant="outline" className="w-full">
+                Create Assignment
+              </Button>
+            </Link>
+            <Link to="/teacher/grading">
+              <Button variant="outline" className="w-full">
+                Grade Submissions
+              </Button>
+            </Link>
+            <Link to="/teacher/attendance">
+              <Button variant="outline" className="w-full gap-2">
+                <Play className="h-4 w-4" />
+                Start Class Session
+              </Button>
+            </Link>
           </CardContent>
         </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle>Quick actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button asChild>
-              <Link to="/registration-codes" className="w-full justify-center">
-                Manage Registration Codes
-              </Link>
-            </Button>
-            <Button variant="secondary" asChild>
-              <Link to="/classes" className="w-full justify-center">
-                Browse all classes
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
       </div>
 
-      <Separator />
+      {/* My Classes */}
+      {ownClasses.length > 0 && (
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="border-b">
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-indigo-600" />
+              My Classes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {ownClasses.map((cls) => (
+                <Card key={cls.id} className="border hover:shadow-md transition-shadow cursor-pointer">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-base">{cls.name}</CardTitle>
+                        <p className="text-xs text-muted-foreground mt-1">{cls.subject?.name}</p>
+                      </div>
+                      <Badge variant={cls.status === "active" ? "default" : "outline"} className="text-xs">
+                        {cls.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Code:</span>
+                        <Badge variant="secondary">{cls.inviteCode || "N/A"}</Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Capacity:</span>
+                        <span>{cls.capacity || 0} students</span>
+                      </div>
+                    </div>
+                    <Link to={`/classes/show/${cls.id}`}>
+                      <Button size="sm" variant="outline" className="w-full">
+                        View Details
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

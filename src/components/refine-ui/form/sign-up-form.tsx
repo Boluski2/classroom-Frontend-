@@ -38,7 +38,10 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export const SignUpForm = () => {
   const Link = useLink();
-  const { mutate: register, isPending: isRegistering } = useCreate();
+  const {
+    mutateAsync: register,
+    mutation: { isPending: isRegistering },
+  } = useCreate();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
